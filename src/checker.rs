@@ -18,6 +18,16 @@ struct AnityaVersion {
     latest_version: String,
 }
 
+macro_rules! make_progress_bar {
+    ($msg:expr) => {
+        concat!(
+            "{spinner} [{bar:25.cyan/blue}] ",
+            $msg,
+            " ({bytes_per_sec}, eta {eta})"
+        )
+    };
+}
+
 pub fn update_checker() -> Result<()> {
     let lastest_version = get_lastest_version()?;
     let current_version = get_current_version().unwrap_or_else(|_| {
@@ -75,6 +85,10 @@ pub fn download_vscode() -> Result<()> {
         reqwest::blocking::get(format!("{}{}", DOWNLOAD_VSCODE_URL, arch))?.error_for_status()?;
     let length = r.content_length().unwrap();
     let progress_bar = indicatif::ProgressBar::new(length);
+    progress_bar.set_style(
+        indicatif::ProgressStyle::default_bar()
+            .template(make_progress_bar!("{bytes}/{total_bytes}")),
+    );
     progress_bar.enable_steady_tick(500);
     progress_bar.set_message("Downloading newest vscode tarball ...");
     let mut reader = ProgressReader::new(&mut r, |progress: usize| {
@@ -82,7 +96,7 @@ pub fn download_vscode() -> Result<()> {
     });
     let mut buf = Vec::new();
     reader.read_to_end(&mut buf)?;
-    progress_bar.finish_with_message("Decoding vscode xz tarball ...");
+    progress_bar.set_message("Decoding vscode xz tarball ...");
     let d = GzDecoder::new(&*buf);
     let mut tar = tar::Archive::new(d);
     tar.set_preserve_permissions(true);
