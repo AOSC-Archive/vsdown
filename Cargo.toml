@@ -14,3 +14,5 @@ flate2 = "1.0"
 tar = { git = "https://github.com/eatradish/tar-rs", rev = "d169fb24f80fbf626c87374e55ff45e887516e37" }
 progress-streams = "1.1"
 indicatif = "0.16"
+env_logger = "0.9"
+console = "0.15"

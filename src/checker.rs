@@ -6,9 +6,12 @@ use std::{
     env::consts::ARCH,
     io::{Read, Seek, SeekFrom, Write},
 };
+use console::style;
+
+use crate::info;
 
 const CURRENT_VERSION_DIRECTORY: &str = "/var/lib/vsdown/";
-const CURRENT_VERSION_FILENAME: &str = "current_bersion";
+const CURRENT_VERSION_FILENAME: &str = "current_version";
 const ANITYA_URL: &str = "https://release-monitoring.org/api/v2/versions/?project_id=243355";
 const DOWNLOAD_VSCODE_URL: &str = "https://code.visualstudio.com/sha/download?build=stable&os=";
 const VSCODE_PATH: &str = "/usr/lib";
@@ -30,26 +33,30 @@ macro_rules! make_progress_bar {
 
 pub fn update_checker() -> Result<()> {
     let lastest_version = get_lastest_version()?;
-    let current_version = get_current_version().unwrap_or_else(|_| {
-        std::fs::create_dir_all(CURRENT_VERSION_DIRECTORY).ok();
-        let mut f = std::fs::File::create(format!(
-            "{}{}",
-            CURRENT_VERSION_DIRECTORY, CURRENT_VERSION_FILENAME
-        ))
-        .unwrap();
-        f.write_all(b"None").unwrap();
-        drop(f);
-
-        "None".to_string()
-    });
+    let current_version = match get_current_version() {
+        Ok(v) => v,
+        Err(_) => {
+            info!("You have no vsdown current version log! creating ...");
+            std::fs::create_dir_all(CURRENT_VERSION_DIRECTORY)?;
+            let mut f = std::fs::File::create(format!(
+                "{}{}",
+                CURRENT_VERSION_DIRECTORY, CURRENT_VERSION_FILENAME
+            ))?;
+            f.write_all(b"None")?;
+            drop(f);
+    
+            "None".to_string()
+        }
+    };
     if current_version != lastest_version {
-        bail!("Current version and lastest version not match!\ncurrent version: {}\nlastest version: {}", current_version, lastest_version)
+        bail!("Current version and lastest version not match! current version: {}, lastest version: {}", current_version, lastest_version)
     }
 
     Ok(())
 }
 
 fn get_lastest_version() -> Result<String> {
+    info!("Getting vscode lastest version info ...");
     let json = reqwest::blocking::get(ANITYA_URL)?
         .error_for_status()?
         .json::<AnityaVersion>()?;
@@ -81,6 +88,7 @@ pub fn download_vscode() -> Result<()> {
         "aarch64" => "linux-arm64",
         _ => bail!("VSCode unsupport this arch!"),
     };
+    info!("Downloading newest vscode tarball ...");
     let mut r =
         reqwest::blocking::get(format!("{}{}", DOWNLOAD_VSCODE_URL, arch))?.error_for_status()?;
     let length = r.content_length().unwrap();
@@ -90,13 +98,13 @@ pub fn download_vscode() -> Result<()> {
             .template(make_progress_bar!("{bytes}/{total_bytes}")),
     );
     progress_bar.enable_steady_tick(500);
-    progress_bar.set_message("Downloading newest vscode tarball ...");
     let mut reader = ProgressReader::new(&mut r, |progress: usize| {
         progress_bar.inc(progress as u64);
     });
     let mut buf = Vec::new();
     reader.read_to_end(&mut buf)?;
-    progress_bar.set_message("Decoding vscode xz tarball ...");
+    progress_bar.finish_and_clear();
+    info!("Download finished! Decoding vscode xz tarball ...");
     let d = GzDecoder::new(&*buf);
     let mut tar = tar::Archive::new(d);
     tar.set_preserve_permissions(true);

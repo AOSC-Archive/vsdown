@@ -1,7 +1,9 @@
 use checker::download_vscode;
 use clap::{Parser, Subcommand};
+use console::style;
 
 mod checker;
+mod logger;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -28,17 +30,22 @@ fn main() {
     match args.subcommand {
         VsdownCommand::Install(_) => {
             if let Err(e) = checker::update_checker() {
-                println!("{}", e);
-                download_vscode().unwrap();
+                info!("{}", e);
+                if let Err(e) = download_vscode() {
+                    error!("{}", e);
+                    std::process::exit(1);
+                } else {
+                    info!("Installation finished!");
+                }
             } else {
-                println!("Your VSCode version is lastest!");
+                info!("Your VSCode version is lastest!");
             }
         }
         VsdownCommand::Check(_) => {
             if let Err(e) = checker::update_checker() {
-                println!("{}", e);
+                info!("{}", e);
             } else {
-                println!("Your VSCode version is lastest!");
+                info!("Your VSCode version is lastest!");
             }
         }
     }
