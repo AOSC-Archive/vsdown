@@ -22,6 +22,19 @@ const CODE_DESKTOP: &[u8] = include_bytes!("../res/code.desktop");
 const CODE_URL_HANDLER_DESKTOP: &[u8] = include_bytes!("../res/code-url-handler.desktop");
 const CODE_WORKSPACE_XML: &[u8] = include_bytes!("../res/code-workspace.xml");
 const VSCODE_ICON: &[u8] = include_bytes!("../res/com.visualstudio.code.png");
+const PATH_KV: &[(&str, &[u8])] = &[
+    ("/usr/share/appdata/code.appdata.xml", CODE_APPDATA_XML),
+    ("/usr/share/applications/code.desktop", CODE_DESKTOP),
+    (
+        "/usr/share/applications/code-url-handler.desktop",
+        CODE_URL_HANDLER_DESKTOP,
+    ),
+    (
+        "/usr/share/mine/packages/code-workspace.xml",
+        CODE_WORKSPACE_XML,
+    ),
+    ("/usr/share/pixmaps/com.visualstudio.code.png", VSCODE_ICON),
+];
 
 #[derive(Deserialize)]
 struct AnityaVersion {
@@ -83,8 +96,8 @@ fn get_current_version() -> Result<String> {
     }
     let s = std::str::from_utf8(&buf)?
         .to_string()
-        .replace("\n", "")
-        .replace(" ", "");
+        .replace('\n', "")
+        .replace(' ', "");
 
     Ok(s)
 }
@@ -142,16 +155,25 @@ fn install_metadata_file() -> Result<()> {
     std::fs::create_dir_all("/usr/share/applicaiions")?;
     std::fs::create_dir_all("/usr/share/mine/packages")?;
     std::fs::create_dir_all("/usr/share/pixmaps")?;
-    let mut f = std::fs::File::create("/usr/share/appdata/code.appdata.xml")?;
-    f.write_all(CODE_APPDATA_XML)?;
-    let mut f = std::fs::File::create("/usr/share/applications/code.desktop")?;
-    f.write_all(CODE_DESKTOP)?;
-    let mut f = std::fs::File::create("/usr/share/applications/code-url-handler.desktop")?;
-    f.write_all(CODE_URL_HANDLER_DESKTOP)?;
-    let mut f = std::fs::File::create("/usr/share/mine/packages/code-workspace.xml")?;
-    f.write_all(CODE_WORKSPACE_XML)?;
-    let mut f = std::fs::File::create("/usr/share/pixmaps/com.visualstudio.code.png")?;
-    f.write_all(VSCODE_ICON)?;
+    std::fs::create_dir_all("/usr/bin")?;
+    for (p, b) in PATH_KV {
+        install_file_inner(p, b)?;
+    }
+    let p = Path::new("/usr/bin/vscode");
+    if p.exists() {
+        std::fs::remove_file(p)?;
+    }
+    std::os::unix::fs::symlink("/usr/lib/vscode/code", p)?;
+
+    Ok(())
+}
+
+fn install_file_inner(p: &str, buf: &[u8]) -> Result<()> {
+    let p = Path::new(p);
+    if !p.exists() {
+        let mut f = std::fs::File::create(p)?;
+        f.write_all(buf)?;
+    }
 
     Ok(())
 }
