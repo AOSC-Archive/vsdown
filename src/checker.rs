@@ -142,7 +142,7 @@ pub fn download_vscode() -> Result<()> {
         std::fs::remove_dir_all(p)?;
     }
     std::fs::rename(format!("/usr/lib/VSCode-{}", arch), p)?;
-    install_metadata_file()?;
+    install_beyond()?;
     let mut f = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
@@ -156,7 +156,11 @@ pub fn download_vscode() -> Result<()> {
     Ok(())
 }
 
-fn install_metadata_file() -> Result<()> {
+fn install_beyond() -> Result<()> {
+    remove_vscode()?;
+    let p = Path::new("/usr/bin/vscode");
+    std::os::unix::fs::symlink("/usr/lib/vscode/code", p)
+        .map_err(|e| anyhow!("Could not create symlink! {}", e))?;
     info!("Installing metadata file ...");
     for i in DIRECTORY_PATH {
         std::fs::create_dir_all(i)
@@ -165,12 +169,6 @@ fn install_metadata_file() -> Result<()> {
     for (p, b) in PATH_KV {
         install_file_inner(p, b)?;
     }
-    let p = Path::new("/usr/bin/vscode");
-    if p.exists() {
-        std::fs::remove_file(p)?;
-    }
-    std::os::unix::fs::symlink("/usr/lib/vscode/code", p)
-        .map_err(|e| anyhow!("Could not create symlink! {}", e))?;
 
     Ok(())
 }
@@ -186,10 +184,12 @@ fn install_file_inner(p: &str, buf: &[u8]) -> Result<()> {
 }
 
 pub fn remove_vscode() -> Result<()> {
-    for i in DIRECTORY_PATH {
-        std::fs::remove_dir_all(i)?;
+    info!("Removing vscode ...");
+    for (i, _) in PATH_KV {
+        std::fs::remove_file(i)?;
     }
     std::fs::remove_dir_all("/usr/lib/vscode")?;
+    std::fs::remove_file("/usr/bin/vscode")?;
     std::fs::remove_file(format!(
         "{}{}",
         CURRENT_VERSION_DIRECTORY, CURRENT_VERSION_FILENAME
