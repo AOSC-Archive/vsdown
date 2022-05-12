@@ -97,7 +97,7 @@ pub fn download_vscode() -> Result<()> {
     info!("Downloading newest vscode tarball ...");
     let mut r =
         reqwest::blocking::get(format!("{}{}", DOWNLOAD_VSCODE_URL, arch))?.error_for_status()?;
-    let length = r.content_length().unwrap();
+    let length = r.content_length().unwrap_or(0);
     let progress_bar = indicatif::ProgressBar::new(length);
     progress_bar.set_style(
         indicatif::ProgressStyle::default_bar()
