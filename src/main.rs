@@ -18,12 +18,16 @@ enum VsdownCommand {
     Install(Install),
     /// Check vscode update
     Check(Check),
+    /// Remove vscode
+    Remove(Remove),
 }
 
 #[derive(Parser, Debug)]
 struct Install;
 #[derive(Parser, Debug)]
 struct Check;
+#[derive(Parser, Debug)]
+struct Remove;
 
 fn main() {
     let args = Args::parse();
@@ -46,6 +50,14 @@ fn main() {
                 info!("{}", e);
             } else {
                 info!("Your VSCode version is lastest!");
+            }
+        }
+        VsdownCommand::Remove(_) => {
+            if let Err(e) = checker::remove_vscode() {
+                error!("{}", e);
+                std::process::exit(1);
+            } else {
+                info!("VSCode has removed!");
             }
         }
     }

@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use console::style;
 use flate2::bufread::GzDecoder;
 use progress_streams::ProgressReader;
@@ -34,6 +34,13 @@ const PATH_KV: &[(&str, &[u8])] = &[
         CODE_WORKSPACE_XML,
     ),
     ("/usr/share/pixmaps/com.visualstudio.code.png", VSCODE_ICON),
+];
+
+const DIRECTORY_PATH: &[&str] = &[
+    "/usr/share/appdata",
+    "/usr/share/applications",
+    "/usr/share/mine/packages",
+    "/usr/share/pixmaps",
 ];
 
 #[derive(Deserialize)]
@@ -151,11 +158,10 @@ pub fn download_vscode() -> Result<()> {
 
 fn install_metadata_file() -> Result<()> {
     info!("Installing metadata file ...");
-    std::fs::create_dir_all("/usr/share/appdata")?;
-    std::fs::create_dir_all("/usr/share/applicaiions")?;
-    std::fs::create_dir_all("/usr/share/mine/packages")?;
-    std::fs::create_dir_all("/usr/share/pixmaps")?;
-    std::fs::create_dir_all("/usr/bin")?;
+    for i in DIRECTORY_PATH {
+        std::fs::create_dir_all(i)
+            .map_err(|e| anyhow!("Could not create directory {}, {}", i, e))?;
+    }
     for (p, b) in PATH_KV {
         install_file_inner(p, b)?;
     }
@@ -163,7 +169,8 @@ fn install_metadata_file() -> Result<()> {
     if p.exists() {
         std::fs::remove_file(p)?;
     }
-    std::os::unix::fs::symlink("/usr/lib/vscode/code", p)?;
+    std::os::unix::fs::symlink("/usr/lib/vscode/code", p)
+        .map_err(|e| anyhow!("Could not create symlink! {}", e))?;
 
     Ok(())
 }
@@ -174,6 +181,19 @@ fn install_file_inner(p: &str, buf: &[u8]) -> Result<()> {
         let mut f = std::fs::File::create(p)?;
         f.write_all(buf)?;
     }
+
+    Ok(())
+}
+
+pub fn remove_vscode() -> Result<()> {
+    for i in DIRECTORY_PATH {
+        std::fs::remove_dir_all(i)?;
+    }
+    std::fs::remove_dir_all("/usr/lib/vscode")?;
+    std::fs::remove_file(format!(
+        "{}{}",
+        CURRENT_VERSION_DIRECTORY, CURRENT_VERSION_FILENAME
+    ))?;
 
     Ok(())
 }
