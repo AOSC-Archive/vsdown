@@ -24,7 +24,11 @@ enum VsdownCommand {
 }
 
 #[derive(Parser, Debug)]
-struct Install;
+struct Install {
+    #[clap(short = 'f', long)]
+    force: bool,
+}
+
 #[derive(Parser, Debug)]
 struct Check;
 #[derive(Parser, Debug)]
@@ -33,7 +37,15 @@ struct Remove;
 fn main() {
     let args = Args::parse();
     match args.subcommand {
-        VsdownCommand::Install(_) => {
+        VsdownCommand::Install(Install { force }) => {
+            if force {
+                if let Err(e) = install_vscode() {
+                    error!("{}", e);
+                    std::process::exit(1);
+                } else {
+                    info!("Installation finished!");
+                }
+            }
             if let Err(e) = checker::update_checker() {
                 info!("{}", e);
                 if let Err(e) = install_vscode() {

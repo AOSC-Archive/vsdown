@@ -209,7 +209,7 @@ pub fn remove_vscode() -> Result<()> {
     Ok(())
 }
 
-fn remove_inner(p: &str) -> Result<()>{
+fn remove_inner(p: &str) -> Result<()> {
     let p = Path::new(p);
     if p.exists() {
         std::fs::remove_file(p)?;
