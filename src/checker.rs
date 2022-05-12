@@ -194,14 +194,26 @@ fn install_file_inner(p: &str, buf: &[u8]) -> Result<()> {
 pub fn remove_vscode() -> Result<()> {
     info!("Removing vscode ...");
     for (i, _) in PATH_KV {
-        std::fs::remove_file(i)?;
+        remove_inner(i)?;
     }
-    std::fs::remove_dir_all("/usr/lib/vscode")?;
-    std::fs::remove_file("/usr/bin/vscode")?;
-    std::fs::remove_file(format!(
+    let p = Path::new("/usr/lib/vscode");
+    if p.exists() {
+        std::fs::remove_dir_all("/usr/lib/vscode")?;
+    }
+    remove_inner("/usr/bin/vscode")?;
+    remove_inner(&format!(
         "{}{}",
         CURRENT_VERSION_DIRECTORY, CURRENT_VERSION_FILENAME
     ))?;
+
+    Ok(())
+}
+
+fn remove_inner(p: &str) -> Result<()>{
+    let p = Path::new(p);
+    if p.exists() {
+        std::fs::remove_file(p)?;
+    }
 
     Ok(())
 }
