@@ -1,4 +1,5 @@
 use anyhow::{bail, Result};
+use console::style;
 use flate2::bufread::GzDecoder;
 use progress_streams::ProgressReader;
 use serde::Deserialize;
@@ -6,7 +7,6 @@ use std::{
     env::consts::ARCH,
     io::{Read, Seek, SeekFrom, Write},
 };
-use console::style;
 
 use crate::info;
 
@@ -15,6 +15,12 @@ const CURRENT_VERSION_FILENAME: &str = "current_version";
 const ANITYA_URL: &str = "https://release-monitoring.org/api/v2/versions/?project_id=243355";
 const DOWNLOAD_VSCODE_URL: &str = "https://code.visualstudio.com/sha/download?build=stable&os=";
 const VSCODE_PATH: &str = "/usr/lib";
+
+const CODE_APPDATA_XML: &[u8] = include_bytes!("../res/code.appdata.xml");
+const CODE_DESKTOP: &[u8] = include_bytes!("../res/code.desktop");
+const CODE_URL_HANDLER_DESKTOP: &[u8] = include_bytes!("../res/code-url-handler.desktop");
+const CODE_WORKSPACE_XML: &[u8] = include_bytes!("../res/code-workspace.xml");
+const VSCODE_ICON: &[u8] = include_bytes!("../res/com.visualstudio.code.png");
 
 #[derive(Deserialize)]
 struct AnityaVersion {
@@ -44,7 +50,7 @@ pub fn update_checker() -> Result<()> {
             ))?;
             f.write_all(b"None")?;
             drop(f);
-    
+
             "None".to_string()
         }
     };
@@ -119,6 +125,28 @@ pub fn download_vscode() -> Result<()> {
         ))?;
     f.seek(SeekFrom::Start(0))?;
     f.write_all(get_lastest_version()?.as_bytes())?;
+    std::fs::rename(format!("/usr/lib/VSCode-{}", arch), "/usr/lib/vscode")?;
+    install_metadata_file()?;
 
+    Ok(())
+}
+
+fn install_metadata_file() -> Result<()> {
+    info!("Installing metadata file ...");
+    std::fs::create_dir_all("/usr/share/appdata")?;
+    std::fs::create_dir_all("/usr/share/applicaiions")?;
+    std::fs::create_dir_all("/usr/share/mine/packages")?;
+    std::fs::create_dir_all("/usr/share/pixmaps")?;
+    let mut f = std::fs::File::create("/usr/share/appdata/code.appdata.xml")?;
+    f.write_all(CODE_APPDATA_XML)?;
+    let mut f = std::fs::File::create("/usr/share/applications/code.desktop")?;
+    f.write_all(CODE_DESKTOP)?;
+    let mut f = std::fs::File::create("/usr/share/applications/code-url-handler.desktop")?;
+    f.write_all(CODE_URL_HANDLER_DESKTOP)?;
+    let mut f = std::fs::File::create("/usr/share/mine/packages/code-workspace.xml")?;
+    f.write_all(CODE_WORKSPACE_XML)?;
+    let mut f = std::fs::File::create("/usr/share/pixmaps/com.visualstudio.code.png")?;
+    f.write_all(VSCODE_ICON)?;
+    
     Ok(())
 }
