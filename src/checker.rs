@@ -5,7 +5,8 @@ use progress_streams::ProgressReader;
 use serde::Deserialize;
 use std::{
     env::consts::ARCH,
-    io::{Read, Seek, SeekFrom, Write}, path::Path,
+    io::{Read, Seek, SeekFrom, Write},
+    path::Path,
 };
 
 use crate::info;
@@ -116,6 +117,12 @@ pub fn download_vscode() -> Result<()> {
     tar.set_preserve_permissions(true);
     tar.set_preserve_ownerships(true);
     tar.unpack(VSCODE_PATH)?;
+    let p = Path::new("/usr/lib/vscode");
+    if p.is_dir() {
+        std::fs::remove_dir_all(p)?;
+    }
+    std::fs::rename(format!("/usr/lib/VSCode-{}", arch), p)?;
+    install_metadata_file()?;
     let mut f = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
@@ -125,12 +132,6 @@ pub fn download_vscode() -> Result<()> {
         ))?;
     f.seek(SeekFrom::Start(0))?;
     f.write_all(get_lastest_version()?.as_bytes())?;
-    let p = Path::new("/usr/lib/vscode");
-    if p.is_dir() {
-        std::fs::remove_dir_all(p)?;
-    }
-    std::fs::rename(format!("/usr/lib/VSCode-{}", arch), p)?;
-    install_metadata_file()?;
 
     Ok(())
 }
@@ -151,6 +152,6 @@ fn install_metadata_file() -> Result<()> {
     f.write_all(CODE_WORKSPACE_XML)?;
     let mut f = std::fs::File::create("/usr/share/pixmaps/com.visualstudio.code.png")?;
     f.write_all(VSCODE_ICON)?;
-    
+
     Ok(())
 }
