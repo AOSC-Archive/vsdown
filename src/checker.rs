@@ -200,6 +200,9 @@ pub fn remove_vscode() -> Result<()> {
     if p.exists() {
         std::fs::remove_dir_all("/usr/lib/vscode")?;
     }
+    if std::fs::read_link("/usr/bin/vscode").is_ok() {
+        std::fs::remove_file("/usr/bin/vscode")?;
+    }
     remove_inner("/usr/bin/vscode")?;
     remove_inner(&format!(
         "{}{}",

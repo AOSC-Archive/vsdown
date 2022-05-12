@@ -45,8 +45,7 @@ fn main() {
                 } else {
                     info!("Installation finished!");
                 }
-            }
-            if let Err(e) = checker::update_checker() {
+            } else if let Err(e) = checker::update_checker() {
                 info!("{}", e);
                 if let Err(e) = install_vscode() {
                     error!("{}", e);
