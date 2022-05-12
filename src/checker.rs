@@ -5,7 +5,7 @@ use progress_streams::ProgressReader;
 use serde::Deserialize;
 use std::{
     env::consts::ARCH,
-    io::{Read, Seek, SeekFrom, Write},
+    io::{Read, Seek, SeekFrom, Write}, path::Path,
 };
 
 use crate::info;
@@ -125,8 +125,11 @@ pub fn download_vscode() -> Result<()> {
         ))?;
     f.seek(SeekFrom::Start(0))?;
     f.write_all(get_lastest_version()?.as_bytes())?;
-    std::fs::remove_dir_all("/usr/lib/vscode")?;
-    std::fs::rename(format!("/usr/lib/VSCode-{}", arch), "/usr/lib/vscode")?;
+    let p = Path::new("/usr/lib/vscode");
+    if p.is_dir() {
+        std::fs::remove_dir_all(p)?;
+    }
+    std::fs::rename(format!("/usr/lib/VSCode-{}", arch), p)?;
     install_metadata_file()?;
 
     Ok(())
