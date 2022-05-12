@@ -109,7 +109,7 @@ fn get_current_version() -> Result<String> {
     Ok(s)
 }
 
-pub fn download_vscode() -> Result<()> {
+fn download_vscode() -> Result<(Vec<u8>, &'static str)> {
     let arch = match ARCH {
         "x86_64" => "linux-x64",
         "aarch64" => "linux-arm64",
@@ -131,33 +131,41 @@ pub fn download_vscode() -> Result<()> {
     let mut buf = Vec::new();
     reader.read_to_end(&mut buf)?;
     progress_bar.finish_and_clear();
+
+    Ok((buf, arch))
+}
+
+fn install(buf: Vec<u8>, arch: &str) -> Result<()> {
     info!("Download finished! Decoding vscode xz tarball ...");
     let d = GzDecoder::new(&*buf);
     let mut tar = tar::Archive::new(d);
     tar.set_preserve_permissions(true);
     tar.set_preserve_ownerships(true);
     tar.unpack(VSCODE_PATH)?;
-    let p = Path::new("/usr/lib/vscode");
-    if p.is_dir() {
-        std::fs::remove_dir_all(p)?;
-    }
-    std::fs::rename(format!("/usr/lib/VSCode-{}", arch), p)?;
+    remove_vscode()?;
+    std::fs::rename(format!("/usr/lib/VSCode-{}", arch), "/usr/lib/vscode")?;
     install_beyond()?;
     let mut f = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
+        .create(true)
         .open(format!(
             "{}{}",
             CURRENT_VERSION_DIRECTORY, CURRENT_VERSION_FILENAME
         ))?;
     f.seek(SeekFrom::Start(0))?;
     f.write_all(get_lastest_version()?.as_bytes())?;
+    Ok(())
+}
+
+pub fn install_vscode() -> Result<()> {
+    let (buf, arch) = download_vscode()?;
+    install(buf, arch)?;
 
     Ok(())
 }
 
 fn install_beyond() -> Result<()> {
-    remove_vscode()?;
     let p = Path::new("/usr/bin/vscode");
     std::os::unix::fs::symlink("/usr/lib/vscode/code", p)
         .map_err(|e| anyhow!("Could not create symlink! {}", e))?;
@@ -167,7 +175,7 @@ fn install_beyond() -> Result<()> {
             .map_err(|e| anyhow!("Could not create directory {}, {}", i, e))?;
     }
     for (p, b) in PATH_KV {
-        install_file_inner(p, b)?;
+        install_file_inner(p, b).map_err(|e| anyhow!("Can not install file {}, {}", p, e))?;
     }
 
     Ok(())

@@ -1,6 +1,7 @@
-use checker::download_vscode;
 use clap::{Parser, Subcommand};
 use console::style;
+
+use crate::checker::install_vscode;
 
 mod checker;
 mod logger;
@@ -35,7 +36,7 @@ fn main() {
         VsdownCommand::Install(_) => {
             if let Err(e) = checker::update_checker() {
                 info!("{}", e);
-                if let Err(e) = download_vscode() {
+                if let Err(e) = install_vscode() {
                     error!("{}", e);
                     std::process::exit(1);
                 } else {
