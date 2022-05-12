@@ -125,6 +125,7 @@ pub fn download_vscode() -> Result<()> {
         ))?;
     f.seek(SeekFrom::Start(0))?;
     f.write_all(get_lastest_version()?.as_bytes())?;
+    std::fs::remove_dir_all("/usr/lib/vscode")?;
     std::fs::rename(format!("/usr/lib/VSCode-{}", arch), "/usr/lib/vscode")?;
     install_metadata_file()?;
 
