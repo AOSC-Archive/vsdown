@@ -63,7 +63,7 @@ pub fn update_checker() -> Result<()> {
     let current_version = match get_current_version() {
         Ok(v) => v,
         Err(_) => {
-            info!("You have no vsdown current version log! creating ...");
+            info!("Recording current Visual Studio Code version information ...");
             std::fs::create_dir_all(CURRENT_VERSION_DIRECTORY)?;
             let mut f = std::fs::File::create(format!(
                 "{}{}",
@@ -76,14 +76,14 @@ pub fn update_checker() -> Result<()> {
         }
     };
     if current_version != lastest_version {
-        bail!("Current version and lastest version not match! current version: {}, lastest version: {}", current_version, lastest_version)
+        bail!("Different/newer Visual Studio Code version found. Current version: {}, latest available version: {}.", current_version, lastest_version)
     }
 
     Ok(())
 }
 
 fn get_lastest_version() -> Result<String> {
-    info!("Getting vscode lastest version info ...");
+    info!("Checking for Visual Studio Code update ...");
     let json = reqwest::blocking::get(ANITYA_URL)?
         .error_for_status()?
         .json::<AnityaVersion>()?;
@@ -99,7 +99,7 @@ fn get_current_version() -> Result<String> {
     let mut buf = Vec::new();
     vsdown_ver_log.read_to_end(&mut buf)?;
     if buf.is_empty() {
-        bail!("Can not get current version!")
+        bail!("Failed to detect Visual Studio Code version for the current installation!")
     }
     let s = std::str::from_utf8(&buf)?
         .to_string()
@@ -113,9 +113,9 @@ fn download_vscode() -> Result<(Vec<u8>, &'static str)> {
     let arch = match ARCH {
         "x86_64" => "linux-x64",
         "aarch64" => "linux-arm64",
-        _ => bail!("VSCode unsupport this arch!"),
+        _ => bail!("Unfortunately, Visual Studio Code does not support your device's architecture."),
     };
-    info!("Downloading newest vscode tarball ...");
+    info!("Downloading latest Visual Studio Code release ...");
     let mut r =
         reqwest::blocking::get(format!("{}{}", DOWNLOAD_VSCODE_URL, arch))?.error_for_status()?;
     let length = r.content_length().unwrap_or(0);
@@ -136,7 +136,7 @@ fn download_vscode() -> Result<(Vec<u8>, &'static str)> {
 }
 
 fn install(buf: Vec<u8>, arch: &str) -> Result<()> {
-    info!("Download finished! Decoding vscode xz tarball ...");
+    info!("Download complete, unpacking release ...");
     let d = GzDecoder::new(&*buf);
     let mut tar = tar::Archive::new(d);
     tar.set_preserve_permissions(true);
@@ -168,14 +168,14 @@ pub fn install_vscode() -> Result<()> {
 fn install_beyond() -> Result<()> {
     let p = Path::new("/usr/bin/vscode");
     std::os::unix::fs::symlink("/usr/lib/vscode/code", p)
-        .map_err(|e| anyhow!("Could not create symlink! {}", e))?;
-    info!("Installing metadata file ...");
+        .map_err(|e| anyhow!("Could not create symlink for the vscode executable! {}", e))?;
+    info!("Installing AppStream metadata, desktop entry, and MIME type handler ...");
     for i in DIRECTORY_PATH {
         std::fs::create_dir_all(i)
-            .map_err(|e| anyhow!("Could not create directory {}, {}", i, e))?;
+            .map_err(|e| anyhow!("Failed to create directory {}: {}.", i, e))?;
     }
     for (p, b) in PATH_KV {
-        install_file_inner(p, b).map_err(|e| anyhow!("Can not install file {}, {}", p, e))?;
+        install_file_inner(p, b).map_err(|e| anyhow!("Failed to install {}: {}.", p, e))?;
     }
 
     Ok(())
@@ -192,7 +192,7 @@ fn install_file_inner(p: &str, buf: &[u8]) -> Result<()> {
 }
 
 pub fn remove_vscode() -> Result<()> {
-    info!("Removing vscode ...");
+    info!("Uninstalling Visual Studio Code ...");
     for (i, _) in PATH_KV {
         remove_inner(i)?;
     }

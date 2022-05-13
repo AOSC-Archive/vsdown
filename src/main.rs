@@ -43,7 +43,7 @@ fn main() {
                     error!("{}", e);
                     std::process::exit(1);
                 } else {
-                    info!("Installation finished!");
+                    info!("Visual Studio Code has been successfully installed!");
                 }
             } else if let Err(e) = checker::update_checker() {
                 info!("{}", e);
@@ -51,17 +51,17 @@ fn main() {
                     error!("{}", e);
                     std::process::exit(1);
                 } else {
-                    info!("Installation finished!");
+                    info!("Visual Studio Code has been successfully installed!");
                 }
             } else {
-                info!("Your VSCode version is lastest!");
+                info!("You have already installed the latest Visual Studio Code release!");
             }
         }
         VsdownCommand::Check(_) => {
             if let Err(e) = checker::update_checker() {
                 info!("{}", e);
             } else {
-                info!("Your VSCode version is lastest!");
+                info!("You have already installed the latest Visual Studio Code release!");
             }
         }
         VsdownCommand::Remove(_) => {
@@ -69,7 +69,7 @@ fn main() {
                 error!("{}", e);
                 std::process::exit(1);
             } else {
-                info!("VSCode has removed!");
+                info!("Visual Studio Code has been successfully uninstalled!");
             }
         }
     }
